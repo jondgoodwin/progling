@@ -19,32 +19,27 @@ The key challenges:
 - Although most node types don't use names, the ones that do are spread out unevenly
   across every node group:  a few expressions (variables and functions), most types,
   and some statements (e.g., module nodes).
-  What is the best way to make a node's name information generically accessible
-  regardless of node type, without wasting a lot of space for non-named nodes?
+  What is the best way to gain access to a node's name information, given this disparity?
 - Cone's namespace rules
   vary depending on the semantic context a name is declared within.
   How should various different namespaces be represented to ease correct name resolution?
+- Namespace mechanisms allow importing of unowned names, including via an alias
 - How can costly string matching be reduced to improve compiler performance?
 
-## INamedNode Interface
+## Interface
 
-As the [previous post](/post/the-ir-tree-inode) indicates, all nodes begin with
-a common set of header fields. 
-As it turns out, INodeHdr is only the first of four common headers that a
-node type can use in front of the node-specific fields.
-The other three headers are optional, layered in this order:
+There is no interface usable for accessing a node's name regardless of its node type.
+Thus, it is necessary to match against the node type first, or use an interface that
+does have the name. These are common headers used for nodes:
 
 - **INodeHdr** *(required)* - lexical context, type and flags
-- **ITypedNodeHdr** *(optional)* - the type of a value (for expression nodes)
-- **INamedNodeHdr** *(optional)* - the node's name 
-  as well as a pointer to the node whose namespace this name belongs to
-- **IMethNodeHdr** *(optional)* - for nodes declaring a type that supports methods
+- **IExpNodeHdr** *(optional)* - the type of a value (for expression nodes)
+- **ITypeNodeHdr** *(optional)* - info common across all types
+- **INsTypeNodeHdr** *(optional)* - for type nodes containing a namespace of methods/fields
 
-**Note**: A node type choosing to use any optional header gets all the fields of earlier headers.
-Thus, all named nodes will have space reserved for type information even if
-the named node's type (e.g., a module) does not semantically represent a typed value.
+**Note**: A node type choosing to use any optional header gets all the fields of dependent headers.
 The performance benefit of being able to use fixed offsets to find information quickly
-is worth the price of some memory (the size of a pointer) being wasted.
+is worth the price of some memory being wasted.
 
 ## Name Interning
 

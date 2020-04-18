@@ -9,6 +9,7 @@ toc: true # Optional, enable Table of Contents for specific post
 mathjax: false # Optional, enable MathJax for specific post
 categories:
   - "Intermediate Representation"
+  - "Memory Management"
 tags:
   - "Cone"
   - "Rust"
@@ -142,7 +143,6 @@ activities on these references at the end of the scope they have escaped from.
 
 And that's not all!
 
-
 Where escape analysis gets particularly complicated is when escapes are
 conditional. In other words, it is possible for a function's logic to allow
 a non-copy value to escape under some conditions, but not others.
@@ -153,5 +153,10 @@ it conditionally escapes. The generator can use this flag to generate
 code that sets a runtime flag indicating whether the value has escaped.
 This flag can then be tested at runtime prior to any generated de-aliasing logic.
 
+## Summary
+
 As you see, the Cone compiler's data flow analysis pass really does have a lot of meaningful
-work to do.
+work to do. For more details, see:
+
+- [The Challenge of Counting References](/post/counting-references)
+- [Move Mechanics](/post/move-mechanics)

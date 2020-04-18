@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Compiler Performance and LLVM</title>
+	<meta name="description" content="">
+	<meta name="generator" content="Hugo 0.46" />
+	
+	
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+	<link rel="stylesheet" href="/css/style.css">
+	<script type="text/javascript" src="/js/scripts.js"></script>
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+</head>
+<body class="body body-right-sidebar">
+	<div class="container container-outer">
+		<header class="header">
+			<div class="container container-inner">
+				<div class="logo" role="banner">
+					<a class="logo__link" href="/" title="Programming Linguistics" rel="home">
+						<div class="logo__title">Programming Linguistics</div>
+						<div class="logo__tagline">Meditations on Programming Language Design</div>
+					</a>
+				</div>
+			</div>
+			
+<nav class="menu">
+	<ul class="menu__list">
+		<li class="menu__item"><a class="menu__link" href="/about/">ABOUT</a></li>
+	</ul>
+</nav>
+
+		</header>
+		<div class="wrapper clearfix">
+
+<main class="main content">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Compiler Performance and LLVM</h1><div class="post__meta meta">
+<svg class="icon icon-time" width="16" height="14" viewBox="0 0 16 16"><path d="m8-.0000003c-4.4 0-8 3.6-8 8 0 4.4000003 3.6 8.0000003 8 8.0000003 4.4 0 8-3.6 8-8.0000003 0-4.4-3.6-8-8-8zm0 14.4000003c-3.52 0-6.4-2.88-6.4-6.4000003 0-3.52 2.88-6.4 6.4-6.4 3.52 0 6.4 2.88 6.4 6.4 0 3.5200003-2.88 6.4000003-6.4 6.4000003zm.4-10.4000003h-1.2v4.8l4.16 2.5600003.64-1.04-3.6-2.1600003z"/></svg>
+<time class="post__meta-date meta-date" datetime="2019-03-09T07:50:45">March 09, 2019</time>
+<span class="post__meta-categories meta-categories">
+	<svg class="icon icon-category" width="16" height="16" viewBox="0 0 16 16"><path d="m7 2l1 2h8v11h-16v-13z"/></svg>
+	<span class="meta-categories__list"><a class="meta-categories__link" href="/categories/performance" rel="category">Performance</a></span>
+</span></div>
+		</header>
+<div class="post__toc toc">
+	<div class="toc__title">Page content</div>
+	<div class="toc__menu">
+		<nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#architecting-for-performance">Architecting for Performance</a></li>
+<li><a href="#measuring-performance-of-the-cone-compiler">Measuring Performance of the Cone Compiler</a></li>
+<li><a href="#llvm-and-compiler-performance">LLVM and Compiler Performance</a></li>
+<li><a href="#llvm-performance-measurements">LLVM Performance Measurements</a></li>
+<li><a href="#next-steps">Next Steps</a></li>
+</ul></li>
+</ul>
+</nav>
+	</div>
+</div>
+<div class="post__content clearfix">
+			
+
+<p>I have always wanted the Cone compiler to be fast.
+Faster build times make it easier and more pleasant for the programmer
+to iterate and experiment quickly.
+Compilers built for speed, such as Turbo Pascal, D and Go, win praise and loyalty.
+Languages that struggle more with this, like C++ or Rust, get regular complaints and requests
+to speed up build times.</p>
+
+<p>Compiler speed is also important to Jonathan Blow.
+In his videos, he demonstrates the ability to rebuild a large Jai program in seconds
+and claims the Jai compiler can build 100kloc in a second.
+I would like Cone to match that velocity, so long as it does not interfere in other priorities.</p>
+
+<p>To that end, I designed the Cone compiler for performance,
+following the principles enumerated in <a href="/post/premature-optimization">Premature Optimization</a>.
+In this post, let me share with you the coding choices I made
+and some recent performance measurements that evaluate whether those choices were sound.
+These numbers lead us inevitably to some fascinating questions about the
+elephant in the room:  LLVM&rsquo;s performance profile.</p>
+
+<h2 id="architecting-for-performance">Architecting for Performance</h2>
+
+<p>Let&rsquo;s begin with the Cone compiler design choices made for performance:</p>
+
+<ul>
+<li><p><strong>C</strong>. Choosing any systems language (C++, Rust, D) will likely result in measurably faster programs.
+From my standpoint, choosing C improves the odds, as it makes it easier to get
+closer to the metal. To manage performance even tighter,
+the compiler uses only one external library.
+Although some might argue C has slowed my productivity,
+bloated the code base, and made it susceptible to all manner of unsafety bugs,
+that has not been my experience. My only regret
+is I wish I could have self-hosted it in Cone instead.</p></li>
+
+<li><p><strong>Arena memory management</strong>. Compilers allocate many tiny pieces of data,
+largely for AST/IR nodes and symbol tables. To nearly eliminate the non-trivial runtime cost
+of malloc(), free() and liveness tracking for each data piece,
+the Cone compiler uses a very simple bump-pointer arena allocator.
+Allocation takes just a few instructions to extract the next bite out of a large, malloced arena.
+References are never tracked nor freed, and yet are 100% safe to use.
+The theoretical downside for this strategy is that memory consumption grows non-stop.
+However, in practice, I don&rsquo;t fear the compile ever running out of memory.
+On average, the Cone compiler consumes about 35 bytes of memory for every source code byte.
+How big does your source code need to be before you would consume all memory?</p></li>
+
+<li><p><strong>Data is rarely copied</strong>.
+Nearly all data structures, including the IR and global name table, are mutable and reusable.
+Furthermore, the design of the IR means that most IR nodes survive largely intact
+all the way from parse to gen. Even temporary, working data stacks are allocated once and reused.
+Additionally, string copies of loaded source file tokens happen at most once,
+when interning names and when capturing string literals.
+Compilers that rewrite their AST/IR nodes or use immutable data structures
+will incur a measurable allocation and copying performance cost for doing so.</p></li>
+
+<li><p><strong>Names are interned</strong>.
+The lexer is responsible for interning all names into the global name table.
+As a result, the rest of the compiler (including parsing and name resolution)
+is never slowed down by any string comparison or hash table look-up.
+Correlating a name to an IR node is nearly as simple as dereferencing a pointer.
+Between lexing and generation, the compiler pays no attention to strings in any way,
+other than for error message generation.</p></li>
+
+<li><p><strong>Ad hoc, built-in heuristics</strong>.
+Semantic analysis traverses the full IR only three times.
+No &ldquo;solvers&rdquo; are used for type inference or borrow-checking,
+as cascading chains of conditionals suffice.
+Additionally, none of the semantic analysis happens in abstraction layers
+(e.g., via core library templates or generics).</p></li>
+</ul>
+
+<p>I make no claim to any unimpeachable evidence that these strategies are indeed the best
+performing choices I could make.
+If any vetted research exists that validates these choices, I am unaware of it.
+I can point to Walter Bright&rsquo;s article <a href="http://www.drdobbs.com/cpp/increasing-compiler-speed-by-over-75/240158941">Increasing Compiler Speed By Over 75%</a>
+which quantifies the performance benefit of arena-based memory allocation.
+I welcome any other hard data and/or recommendations regarding these
+(or alternative) performance-based design choices.</p>
+
+<h2 id="measuring-performance-of-the-cone-compiler">Measuring Performance of the Cone Compiler</h2>
+
+<p>The Cone compiler outputs a message summarizing elapsed time and memory usage for every compile.
+Running on my server, as part of the Playground, small programs typically compile in
+4-11 milliseconds.</p>
+
+<p>Although content with that, I recently got curious about what&rsquo;s happening under the covers.
+I ran the Visual Studio profiler.
+One surprising result was that most compilation steps (like
+parsing and semantic analysis) were not even showing up on the log.</p>
+
+<p>My hopeful guess was that these stages were happening more quickly than the
+milli-second probe speed of the profiler could notice.
+To validate that guess, I instrumented the compiler code to use QueryPerformanceCounter,
+which measures elapsed time at a precision of a tenth of a microsecond.</p>
+
+<p>For a small program of 200 LOC (3800 bytes), here are the average elapsed-times on my laptop
+for each front-end compiler stage:</p>
+
+<table>
+<thead>
+<tr>
+<th>μSec</th>
+<th>Compiler Stage</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>300</td>
+<td><strong>Load.</strong> Completely load source program(s) from SSD disk to memory</td>
+</tr>
+
+<tr>
+<td>100</td>
+<td><strong>Lex.</strong> Transform source UTF-8 characters to ready-to-use, interned tokens</td>
+</tr>
+
+<tr>
+<td>300</td>
+<td><strong>Parse.</strong> Convert tokens into high-level IR nodes</td>
+</tr>
+
+<tr>
+<td>100</td>
+<td><strong>Analysis.</strong> All 3 semantic passes: name resolve, type check, data flow</td>
+</tr>
+</tbody>
+</table>
+
+<p>One should not read too much into these numbers.
+Several stages will almost certainly slow down over time,
+particularly when metaprogramming support is added to Cone.
+Furthermore, we don&rsquo;t know how these results will scale to larger programs.
+Even if the nature of the logic suggests scaling will likely be linear,
+tests will need to be performed that confirm this.
+The tests were run on my laptop competing with other programs for the CPU,
+and the results varied ±50% from one run to another.</p>
+
+<p>All caveats aside, these results are breathtaking.
+The untuned, front-end compiler is chewing through 250Kloc per second,
+despite nearly 40% of the time being spent on disk i/o.
+These better-than-expected results
+improve my confidence that Cone&rsquo;s upfront design choices were largely the right ones.</p>
+
+<p>I do wonder why parsing is slower than lexing and analysis.
+Two possibilities come to mind: every token is likely to be trial-matched
+by the recursive descent parser many times across multiple functions
+(which is less true of the lexer&rsquo;s handling of source code characters).
+More intriguing is that this may have more do with the cost of building the Cone IR nodes.
+As compared to lexing and analysis, parsing is by far doing the most memory mutation.
+Would extensive memory mutation slow things down this much (e.g., because of cache invalidation)?</p>
+
+<p>An astute reader will have noticed that I did not give a number for the code generation stage.
+Here, unfortunately, the performance news is much less stellar.
+Generating an optimized object file from the analyzed IR takes about 115,500 μSec.
+That&rsquo;s 99.3% of the total compile time!
+To understand this disappointing result, we must talk about LLVM.</p>
+
+<h2 id="llvm-and-compiler-performance">LLVM and Compiler Performance</h2>
+
+<p>Like many recent compilers, Cone uses LLVM to generate optimized native code.
+Essentially, the compiler&rsquo;s code generation stage builds binary LLVM IR from the Cone IR,
+asks LLVM to verify and optimize it, and then has LLVM generate an object
+file for the appropriate target CPU architecture.</p>
+
+<p>My experience using LLVM has been extremely positive.
+I doubt I would have tackled building a compiler for Cone without the existence of LLVM.
+My misgivings about LLVM&rsquo;s performance are the <em>only</em> significant concern
+I have about using LLVM in Cone.</p>
+
+<p>I want to be very careful when talking about LLVM and performance.
+Although my intent is to offer helpful feedback and intelligence on what to expect from LLVM,
+precedence suggests my words could be misconstrued as rude or unfair to the many people
+that have invested 100s of man-years effort contributing to this amazing tool.
+It would be a shame if people felt a stronger need to vigorously (and needlessly) defend LLVM
+rather than engaging in a insightful dialogue that explores what we can learn.</p>
+
+<p>Clearly, it would be silly to compare too closely the performance results of two differently-sized
+code bases, especially when they perform different tasks.
+Indeed, one should <em>expect</em> that a native backend will take longer to
+run than the front-end stages, for several reasons:</p>
+
+<ul>
+<li>the backend often performs at least two significant lowering stages
+to more complex representations (e.g., to LLVM IR and then to machine language).</li>
+<li>Some forms of optimization are computationally expensive.</li>
+<li>Engines like LLVM need architectural abstractions that improve flexibility,
+such as the ability to generate code across a wide-range of different architectures and
+the ability to define custom optimization passes.</li>
+</ul>
+
+<p>However, given that LLVM&rsquo;s performance plays a dominant role on compiler build times,
+it is reasonable to question whether a backend truly needs to
+consume almost 200x more of the CPU than a front-end processing essentially the same semantic intent.
+Might it be possible to achieve similar stellar outcomes more quickly by
+using a LLVM-comparable tool that was built using a more performance-based architecture?</p>
+
+<p>Unfortunately, we cannot arrive at a definitive answer by
+just evaluating the current state-of-the-art in compilation tools.
+The evidence we have is circumstantial and can be interpreted either way:</p>
+
+<ul>
+<li>The fastest compilers do not use LLVM.
+I would not be surprised if the compile-speed advantages of (say) tcc, D and Jai are due,
+in no small portion, to the fact that they do not use LLVM.</li>
+<li>A valid counterargument is that these faster compilers
+generate less optimal runtime code.
+Furthermore, gcc (which does not use LLVM and which does compete well with LLVM-based CLang
+on runtime performance) offers no significant compiler speed advantage.</li>
+</ul>
+
+<p>Given our lack of certainty as to whether it is possible to create a faster LLVM,
+it is worth noting that this performance challenge is important enough that work
+on alternative backends (e.g., Cranelift) is ongoing and
+is heavily motivated by improving compile-time performance.
+Even a partial solution (faster debug builds) is better than no improvement at all.</p>
+
+<h2 id="llvm-performance-measurements">LLVM Performance Measurements</h2>
+
+<p>Several people have strongly claimed that the performance issues around LLVM
+are largely attributable to the extensive optimization work it performs.
+Let&rsquo;s see whether detailed performance metrics support this theory.</p>
+
+<p>Here are elapsed-time measurements for various LLVM backend stages
+processing the same small Cone program that I measured earlier:</p>
+
+<table>
+<thead>
+<tr>
+<th>μSec</th>
+<th>LLVM Stage</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>2,500</td>
+<td><strong>Setup.</strong> Initialize LLVM&rsquo;s target machine, data layout and global context</td>
+</tr>
+
+<tr>
+<td>11,000</td>
+<td><strong>Gen LLVM IR</strong> Build LLVM IR by traversing the Cone IR nodes</td>
+</tr>
+
+<tr>
+<td>3,000</td>
+<td><strong>Verify LLVMIR</strong> Verify the build LLVM IR</td>
+</tr>
+
+<tr>
+<td>15,000</td>
+<td><strong>Optimize</strong> Optimize the LLVM IR</td>
+</tr>
+
+<tr>
+<td>84,000</td>
+<td><strong>Gen obj.</strong> Convert LLVM IR to an object file and save it</td>
+</tr>
+</tbody>
+</table>
+
+<p>Notice how much larger all these numbers are than the numbers shown for the front-end stages!
+Let&rsquo;s explore what these results mean by offering some context about the work
+each stage performs:</p>
+
+<ul>
+<li><p><strong>Setup</strong>. It is interesting that LLVM initialization takes 3x longer than
+it takes the Cone front-end to fully process a 200 LOC program.
+Even though this initializes code across dozens of possible targets,
+it is still reasonable to wonder if LLVM initialization really needs to be this expensive.
+The one good thing we can say about this 2.5ms cost is that it
+won&rsquo;t scale upward as our source program sizes grow.</p></li>
+
+<li><p><strong>Gen LLVM IR</strong>. This is the only stage that mixes together the performance of Cone
+and LLVM code. Essentially, the Cone logic traverses the Cone IR very similarly
+to any one of the earlier semantic analysis passes.
+Based on the nature of the work being performed,
+we can reasonably guess that the Cone-side performance is unlikely
+to take longer than 100 μSecs (3-passes of semantic analysis).
+If true, this means the LLVM-based logic to build the equivalent
+LLVM IR nodes takes 100x as long.
+Again, we would expect it should take more time,
+as the lowering process here is multiplicative:
+a single Core IR node often translates into multiple LLVM IR SSA-based nodes
+(in this case, a 200LOC source file turns into 1000LOC LLVM IR file).
+Additionally, a conversion from Cone type info to LLVM type info is regularly needed.
+But is a 100x jump a reasonable cost for what is simply a straightforward lowering step?</p></li>
+
+<li><p><strong>Verify LLVMIR</strong>. This step is effectively semantic analysis for LLVM IR.
+It ensures the module&rsquo;s IR is well-formed, including type checking.
+It is a minor step and possibly unnecessary if the compiler knows it is building
+valid LLVM IR. Even still, it is 30x more expensive compared to the semantic analysis
+for Cone, whose rules as likely more complex (though likely traversing fewer nodes).</p></li>
+
+<li><p><strong>Optimize LLVMIR</strong>. This runs 6 LLVM optimization passes:
+converting stack variables to registers, function inlining,
+simple peephole/bit-twiddline, expression re-association, common subexpression elimination,
+and control-flow graph simplification. This reads in LLVM IR and likely rewrites the LLVM IR six times.
+It is only somewhat more expensive than building the original LLVM IR.
+LLVM IR optimization activity only takes up 15% of LLVM total processing time.</p></li>
+
+<li><p><strong>Gen Obj.</strong> This step lowers LLVM IR to the target&rsquo;s machine language and
+stores it out to disk as a target-specific object file.
+This final LLVM stage takes up 73% of LLVM&rsquo;s running time.
+Some of this can be explained because this second lowering step almost certainly takes more
+time than the first, due to the complexity of the translation and
+the further multiplying factors of generated CPU instructions to LLVM IR nodes
+(800 LOC LLVM IR file turns into 1900 LOC of assembler).
+Furthermore, this lowering stage likely requires further optimization logic
+that is specific to the target architecture&rsquo;s instruction set.
+However, it is once again fair to wonder whether that warrants
+taking well over 100x more time than the full front-end work.</p></li>
+</ul>
+
+<p>Based on this data, there is no smoking gun clearly demonstrating that LLVM&rsquo;s aggressive optimization
+capability is the primary cause of its performance impact.
+On the contrary, every stage of its processing seems to be marked by significantly
+larger performance multipliers over what we might have expected by comparing
+with loosely similar front-end steps processing roughly the same semantic content.
+These results would be consistent with a theory that LLVM&rsquo;s CPU consumption
+results to some degree from its software architecture choices.</p>
+
+<h2 id="next-steps">Next Steps</h2>
+
+<p>It is impossible to reach any firm conclusions about Cone&rsquo;s or LLVM&rsquo;s
+performance architecture based purely on the the data and analysis shared in this post.
+The only way to reach more definitive conclusions requires careful benchmarks
+that compare performance of different design approaches that accomplish the
+exact same task. I don&rsquo;t have the time to do that work now. I hope others will (or have).</p>
+
+<p>From my perspective, some information is still better than none.
+On the basis of this analysis so far,
+I am taking away several useful lessons to guide my future choices:</p>
+
+<ul>
+<li>Designing for performance upfront can work out really well, contrary to the warnings
+from Knuth-inspired skeptics.
+Good decisions for performance can be made that improve programmer productivity
+and result in understandable code.
+I want to keep getting better at this.
+I also want to design the Cone language to make this easier for its programmers.</li>
+<li>I really don&rsquo;t need to focus on performance tuning the Cone compiler&rsquo;s front-end.
+I am really quite pleased with its current speed.
+After adding macro and generics support, it would probably be valuable to revisit these numbers.</li>
+<li>LLVM is going to be a boat anchor to rapid Cone build times.
+Near term, I need to explore ways to speed up my use of LLVM, if possible.
+For example, is there a way to build the LLVM IR by
+not allocating each LLVM IR node&rsquo;s space one-at-a-time?
+This might improve data locality and speed up future activity.</li>
+<li>Longer term, I should probably explore alternatives to LLVM, particularly
+for doing debug builds where the generation of optimized runtimes is not a priority.
+Since I am not eager to tackle the work of building a custom back-end,
+I will certainly take a closer look at ways to exploit back-ends used by compilers
+that boast much faster code generation (e.g., tcc or Jai).</li>
+</ul>
+
+<p>As always, I am interested to learn from other people&rsquo;s experiences and insights
+regarding compiler and LLVM/backend performance,
+whether on your own projects or based on results you have seen published by other
+teams that must surely be wrestling with similar challenges.</p>
+
+		</div>
+		
+<div class="post__tags tags clearfix">
+	<svg class="icon icon-tag" width="16" height="16" viewBox="0 0 16 16"><path d="M16 9.5c0 .373-.24.74-.5 1l-5 5c-.275.26-.634.5-1 .5-.373 0-.74-.24-1-.5L1 8a2.853 2.853 0 0 1-.7-1C.113 6.55 0 5.973 0 5.6V1.4C0 1.034.134.669.401.401.67.134 1.034 0 1.4 0h4.2c.373 0 .95.113 1.4.3.45.187.732.432 1 .7l7.5 7.502c.26.274.5.632.5.998zM3.5 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>
+	<ul class="tags__list">
+		<li class="tags__item"><a class="tags__link btn" href="/tags/cone/" rel="tag">Cone</a></li>
+	</ul>
+</div>
+	</article>
+	
+<div class="authorbox clearfix">
+	<figure class="authorbox__avatar">
+		<img alt="Jonathan Goodwin avatar" src="/images/pegicon.png" class="avatar" height="90" width="90">
+	</figure>
+	<div class="authorbox__header">
+		<span class="authorbox__name">About Jonathan Goodwin</span>
+	</div>
+	<div class="authorbox__description">
+		3D web evangelist. Author of the Cone &amp; Acorn programming languages.
+	</div>
+</div>
+	
+<nav class="post-nav row clearfix">
+	<div class="post-nav__item post-nav__item--prev col-1-2">
+		<a class="post-nav__link" href="/post/premature-optimization/" rel="prev"><span class="post-nav__caption">«&thinsp;Previous</span><p class="post-nav__post-title">Premature Optimization</p></a>
+	</div>
+</nav>
+	
+</main>
+
+<aside class="sidebar">
+	
+<div class="widget-search widget">
+	<form class="widget-search__form" role="search" method="get" action="https://google.com/search">
+		<label>
+			<input class="widget-search__field" type="search" placeholder="SEARCH..." value="" name="q">
+		</label>
+		<input class="widget-search__submit" type="submit" value="Search">
+		<input type="hidden" name="sitesearch" value="http://pling.jondgoodwin.com/" />
+	</form>
+</div>
+	
+<div class="widget-recent widget">
+	<h4 class="widget__title">Recent Posts</h4>
+	<div class="widget__content">
+		<ul class="widget__list">
+			<li class="widget__item"><a class="widget__link" href="/post/compiler-performance/">Compiler Performance and LLVM</a></li>
+			<li class="widget__item"><a class="widget__link" href="/post/premature-optimization/">Premature Optimization</a></li>
+			<li class="widget__item"><a class="widget__link" href="/post/transitional-permissions/">Transitional Permissions</a></li>
+			<li class="widget__item"><a class="widget__link" href="/post/interior-references-and-shared-mutable/">Interior References and Shared Mutability</a></li>
+			<li class="widget__item"><a class="widget__link" href="/post/race-safe-strategies/">Race-Safe Strategies</a></li>
+		</ul>
+	</div>
+</div>
+	
+<div class="widget-categories widget">
+	<h4 class="widget__title">Categories</h4>
+	<div class="widget__content">
+		<ul class="widget__list">
+			<li class="widget__item"><a class="widget__link" href="/categories/intermediate-representation">Intermediate representation</a></li>
+			<li class="widget__item"><a class="widget__link" href="/categories/memory-management">Memory management</a></li>
+			<li class="widget__item"><a class="widget__link" href="/categories/performance">Performance</a></li>
+			<li class="widget__item"><a class="widget__link" href="/categories/permissions">Permissions</a></li>
+		</ul>
+	</div>
+</div>
+	
+<div class="widget-social widget">
+	<h4 class="widget-social__title widget__title">Social</h4>
+	<div class="widget-social__content widget__content">
+		<div class="widget-social__item widget__item">
+			<a class="widget-social__link widget__link btn" title="GitHub" rel="noopener noreferrer" href="https://github.com/jondgoodwin" target="_blank">
+				<svg class="widget-social__link-icon icon-github" viewBox="0 0 384 374" width="24" height="24" fill="#fff"><path d="m192 0c-106.1 0-192 85.8-192 191.7 0 84.7 55 156.6 131.3 181.9 9.6 1.8 13.1-4.2 13.1-9.2 0-4.6-.2-16.6-.3-32.6-53.4 11.6-64.7-25.7-64.7-25.7-8.7-22.1-21.3-28-21.3-28-17.4-11.9 1.3-11.6 1.3-11.6 19.3 1.4 29.4 19.8 29.4 19.8 17.1 29.3 44.9 20.8 55.9 15.9 1.7-12.4 6.7-20.8 12.2-25.6-42.6-4.8-87.5-21.3-87.5-94.8 0-20.9 7.5-38 19.8-51.4-2-4.9-8.6-24.3 1.9-50.7 0 0 16.1-5.2 52.8 19.7 15.3-4.2 31.7-6.4 48.1-6.5 16.3.1 32.7 2.2 48.1 6.5 36.7-24.8 52.8-19.7 52.8-19.7 10.5 26.4 3.9 45.9 1.9 50.7 12.3 13.4 19.7 30.5 19.7 51.4 0 73.7-44.9 89.9-87.7 94.6 6.9 5.9 13 17.6 13 35.5 0 25.6-.2 46.3-.2 52.6 0 5.1 3.5 11.1 13.2 9.2 76.2-25.5 131.2-97.3 131.2-182 0-105.9-86-191.7-192-191.7z"/></svg>
+				<span>GitHub</span>
+			</a>
+		</div>
+	</div>
+</div>
+	
+<div class="widget-taglist widget">
+	<h4 class="widget__title">Tags</h4>
+	<div class="widget__content">
+		<a class="widget-taglist__link widget__link btn" href="/tags/c&#43;&#43;" title="C&#43;&#43;">C&#43;&#43;</a>
+		<a class="widget-taglist__link widget__link btn" href="/tags/cone" title="Cone">Cone</a>
+		<a class="widget-taglist__link widget__link btn" href="/tags/go" title="Go">Go</a>
+		<a class="widget-taglist__link widget__link btn" href="/tags/pony" title="Pony">Pony</a>
+		<a class="widget-taglist__link widget__link btn" href="/tags/rust" title="Rust">Rust</a>
+	</div>
+</div>
+</aside>
+	</div>
+		<footer class="footer">
+			<div class="container container-inner">
+				<div class="footer__copyright">&copy; 2019 Programming Linguistics. <span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span></div>
+			</div>
+		</footer>
+	</div>
+
+<script>
+	var navigation = responsiveNav(".menu", {
+		navClass: "menu--collapse",
+	});
+</script></body>
+</html>

@@ -199,5 +199,6 @@ Other posts in this series cover:
 - [The **INode** base interface that applies to all nodes](/post/the-ir-tree-inode)
 - [Named nodes, namespaces and name resolution](/post/the-ir-tree-named-nodes)
 - [Typed expression nodes and type inference](/post/the-ir-tree-typed-nodes)
+- [Data Flow Analysis](/post/data-flow-analysis)
 
 This [Reddit thread](https://www.reddit.com/r/ProgrammingLanguages/comments/95thtz/ir_design_for_the_cone_compiler/?st=jkm3d52d&sh=51909566) offers a place to discuss this post.
