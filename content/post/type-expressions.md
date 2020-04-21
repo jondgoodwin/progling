@@ -1,7 +1,7 @@
 ---
 title: "Unifying Type and Value Expressions"
 date: 2020-04-06T11:27:31+10:00
-draft: false
+draft: true
 # thumbnail: "img/placeholder.jpg" # Optional, thumbnail
 disable_comments: true # Optional, disable Disqus comments if true
 authorbox: true # Optional, enable authorbox for specific post
