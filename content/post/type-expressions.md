@@ -29,14 +29,11 @@ A value expression computes some typed value when evaluated:
 
 A type expression denotes some specific type:
 
-    struct Point {
-	    x: i32;
-		y: i32;
-	}
+    ?&i32, f32    // a tuple: optional reference to an integer and a float
 	
 The grammar rules of most programming languages vary significantly between value expressions
 and type expressions. Value expressions often support dozens
-of unary, infix and ternary operators with well-defined precedence.
+of unary, infix and other operators with well-defined precedence.
 Type expressions typically use fewer operators, if any. 
 Even when type and value expression support the same operators,
 they may not do so in syntactically equivalent ways,
@@ -91,7 +88,7 @@ the parser has to be flexible to correctly parse expr1 and expr2 as either
 a value or type expression.
 
 Even this would not be much of a problem if all types were nominal (e.g., Java).
-When types are nominal, it means a type expression is just the name of the type.
+When types are nominal, it means a type expression is pretty simple, oriented around the name.
 The parser could handle a type name the same way as a variable name,
 and then resolve it properly during semantic analysis.
 This is not possible with Cone, because
@@ -99,7 +96,7 @@ Cone supports a rich collection of structural types
 which employ various operators to form a type expression.
 
 There are several approaches one could take to handle this syntactic ambiguity.
-I could use a back-tracking parser. I could add extra syntax
+One could use a back-tracking parser. One could add extra syntax
 to mark when an expression should be treated as a type expression
 (e.g., preceding a type expression with a colon).
 Those approaches do not appeal to me, as they increase complexity for everyone.
@@ -110,8 +107,8 @@ type and value expressions in as synergistic and simple way.
 
 ## Unification for Cone ##
 
-To accomplish unify these grammars, let's examine each kind of type expression, one after another,
-and prpose how to resolve any grammar conflicts with value expressions
+To unify these grammars, let's examine each kind of type expression, one after another,
+and propose how to resolve any grammar conflicts with value expressions
 that employ similar syntax.
 
 ### Nominal Types ###
@@ -119,7 +116,7 @@ that employ similar syntax.
 Let's begin with the various nominal types: struct, tuple, enum, number types, etc.
 As already mentioned, unification here is quite straightforward,
 as nominal types cleanly distinguish between the name-based definition of the type
-and its use. The definition of a nominal type is a statement.
+and its use. The **definition** of a nominal type is a statement.
 As such, it is not a type expression, and cannot be used within one.
 
 Type expressions need only refer to a nominal type by its name.
@@ -145,7 +142,7 @@ A type tuple is a list of types separated by commas:
 	
 Good news! That's exactly the same syntax used by value-based tuples.
 So, the parser can parse a type tuple or a value tuple in exactly the same way,
-and then distinguish which it has later on during semantic analysis.
+and then distinguish which it has later, during semantic analysis.
 
 Further solidifying their isomorphism, is that both type tuples
 and value types appreciate being wrapped in parentheses when they
@@ -159,7 +156,7 @@ Would that they all would be this easy!
 References in Cone are fortunately another straightforward win.
 Here is the syntax for a reference type:
 
-    ref-type ::= '&' ('<' | [])? region-type? lifetime? perm-type? type
+    ref-type ::= '&' ('<' | [])? region-type? perm-type? lifetime? type
 	
 Let's walk through these elements which are unique to Cone:
 
@@ -172,12 +169,12 @@ Let's walk through these elements which are unique to Cone:
   allocating the object pointed-to by this object (e.g., `so` for single-owner).
   If a region is not specified, this corresponds to a borrowed reference.
  
-- The lifetime is an annotation (e.g., `'a`) that can be placed on any reference
-  (though typically a borrowed reference). It helps ensure memory safety.
-  
 - The permission constrains how a reference may be used, such as indicating
   whether the object it points to may be read or mutated. Specifying this
   is also optional, and a context-sensitive default is assumed when omitted.
+  
+- The lifetime is an annotation (e.g., `'a`) that can be placed on any reference
+  (though typically a borrowed reference). It helps ensure memory safety.
   
 - The final type describes the type of the object the reference points to.
   
@@ -222,31 +219,132 @@ This effectively creates a reference to an anonymous function:
 
 ### Closures ###
 
-In Cone, a closure is sugar for a struct that not only holds the state of the closure,
-and also implements the callable method named `()`.
-Since a closure holds state, it is possible to move the value piece of it around
-locally, but this is usually awkward. As a result, a value-based closure usually stays
-local and works just fine, often with implicit typing.
+In Cone, a closure is sugar for a struct that both holds the state of the closure
+and implements the callable method named `()`.
+Since a closure holds state, one certainly can move the value piece of it around locally,
+particularly when we can take advantage of type inference.
+However, given the ackwardness of explicitly specifying the full type
+for a closure, a value-based closure usually stays local.
 
-However, when one does wish to move a closure around to other functions,
+When one does wish to move a closure around to other functions,
 this is best done with a virtual reference, built around an ad hoc
-trait that captures the signature of the function. 
-The sugar for defining a virtual reference to this ad hoc trait is
-very similar to that of a reference to a function:
+trait that only captures the signature of the function.
+This allows any closure whose function signature matches, regardless
+of the structure of the state, to type match.
+
+The type expression for defining a virtual reference to a closure looks like
+a reference to a function:
 
     &<fn (i32, i32) i32
 
-
 ### Lifetime-constrained type ###
 
-    'a Xyz
+It is not just references which may need lifetime constraints.
+They can also be valuable for constraining struct-based values which
+contain references and even can be applied to certain number types!
+To accomplish this, Rust uses the `+` operator to apply a lifetime
+annotation to a type: `Context + 'a`
+
+Cone's type expression syntax allows the use of a lifetime annotation
+as effectively a prefix operator: `'a Context`
+
+    life-type ::= lifetime type
+
+Since lifetimes are not used to calculate values, 
+there is no comparable grammatic structure in value expressions.
 	
 ### Pointer ###
 
+Pointer type expressions are simple, especially compared to references:
+
+    ptr-type ::= '*' type
+
+From a C heritage standpoint, the syntax of the
+type expression differs from that of a type constructor for a pointer.
+C uses `&` to construct a pointer. Cone uses it to construct a reference.
+Cone provides no constructor for a pointer, per se.
+Instead, a pointer is created by coercing a reference to a pointer.
+
+That said, value expressions do use `*` as a prefix operator for
+dereferencing a reference or pointer. Fortunately, even if the semantics
+are not perfectly aligned when using the `*` as a prefix operator
+for types vs. values, the grammar here is basically the same.
+
 ### Optional type ###
+
+Cone provides convenient sugar for optional types. Instead of having to
+specify `Option[&i32]`, it is possible to abbreviate this to `?&i32`.
+This means that type expression grammar includes this rule:
+
+    option-type ::= '?' type
+	
+Value expressions do not support use of the question mark as a prefix operator.
 
 ### Array ###
 
-Cannot use [index] type. Instead use, comingles with array "literal"
+I have saved the most troublesome challenge for last.
+My preference is to declare arrays with the element type following
+the size contained in brackets: `[4] i32`.
 
-## Precedence ##
+However, this grammar clashes with the syntax that value expressions
+use for array literals, which also begin with the '[' bracket.
+Array literals do not permit an expression to follow the closing `]` bracket.
+
+The most convenient way to reconcile these grammars is to adopt something
+similar to Rust's syntax, which moves both the size and element type
+within the square brackets, delimited by a semi-colon.
+
+    array-type ::= '[' exp (',' exp)* (';' exp)? ']'
+	
+For a simple array type, it might look like this: `[4; i32]`, where the size comes first.
+For a multi-dimensional array, it would look like this: `[3,3; f32]`.
+This is a lot cleaner than we needed to use C's approach to multi-dimensional arrays:
+`[3; [3; f32]]`!
+
+This dual-partition array syntax also brings added value to array literals, 
+offering support for three
+complementary approaches to constructing a fixed-size array:
+
+- `[1, 4, 9, 16]` which creates a four-element array initialized with those four values.
+- `[6; 0]` which creates a six-element array with every element initialized to 0.
+- `[100; closure]` which creates a large array and uses the closure to initialize
+  each element.
+
+## Implementation Strategies ##
+
+In summary, it turns to be reasonably straightforward to merge Cone's
+syntax for value and type expressions.
+Sometimes, this will mean grammar rules that only apply to types (e.g., `?`)
+and others that only apply to value expressions (so many, including nearly all infix operators).
+These differences can be ignored during parsing, and then flagged as errors
+during semantic analysis, when we know which is expected.
+
+Another fortunate development is that the two grammars do not
+differ in terms of operator precedence.
+
+To change the compiler to support the fusion of expression grammars,
+changes are needed to several passes:
+
+- Cone's parser is recursive descent, with separate parsing functions
+  for each value and type expression grammar rule. These need to be consolidated together
+  so that any expression can be parsed, regardless of whether type or value.
+  They also need to produce AST nodes that are driven by the operator parsed,
+  and are agnostic about the kind of expression it is building.
+  For example, instead of a separate DerefNode and PtrNode,
+  parsing of a `*` prefix operator needs to produce a generic "star" node,
+  which can later be specialized to either a DerefNode or PtrNode.
+  
+- The name resolution pass is when we determine whether a node is part of a type
+  vs. value expression. Since any name resolves to its declaration,
+  this is all we need to know whether the name is for a type vs. a variable.
+  Similarly, a StarNode can be specialized to a PtrNode if the inner expression
+  is a type, otherwise it specializes to a DerefNode.
+  
+- The type check pass is when we can verify whether any specific expression
+  node is expected to be a type vs. value node, based on the context of where
+  it has been placed. If it violates the expectation, a compile-time
+  error can be produced.
+  
+This is not a trivial refactor, but it is not an overly complicated one either.
+Ultimately, this grammatic flexibility opens the door to richer capabilities
+down the road, including (god forbid) dependent types!
