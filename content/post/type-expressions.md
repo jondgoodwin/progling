@@ -198,7 +198,7 @@ the compiler can parse either in the same way and sort out the differences later
 Every function has a signature, which is effectively its type.
 The signature portion of a function is:
 
-    fn-sig ::= 'fn' name? '(' parm-dcl? (',' parm-dcl)* ')' type
+    fn-sig ::= 'fn' name? '(' (parm-dcl (',' parm-dcl)*)? ')' type
 
 Inside the parentheses are the names and types of the parameters.
 The function's return type (which might be a tuple) follows.
