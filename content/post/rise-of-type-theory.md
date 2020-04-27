@@ -25,7 +25,7 @@ between programming languages and type theory.
 
 My dim memory was that this process unfolded like a bubbling stew
 between mathematicians and computer science practitioners,
-colleagues that often knew each other constantly throwing flavors back and forth, 
+colleagues throwing flavors back and forth, 
 exploring different ways to formalize interrelated concepts.
 Very little of it proceeded in a straight line, and sometimes it more
 closely resembled a drunken walk.
@@ -70,8 +70,9 @@ This is an outgrowth of Hilbert's second problem.
 1925 *On the principle of the excluded middle* (Kolmogorov).
 showing that formal logic statements can be formulated using 
 [intuitionistic logic](https://en.wikipedia.org/wiki/Intuitionistic_logic).
-Along with independent work, this leads to the
-[Brower-Heyting-Kolmogorov Interpretation](https://en.wikipedia.org/wiki/Brouwer%E2%80%93Heyting%E2%80%93Kolmogorov_interpretation).
+Along with independent work, this is now known as the
+[Brower-Heyting-Kolmogorov Interpretation](https://en.wikipedia.org/wiki/Brouwer%E2%80%93Heyting%E2%80%93Kolmogorov_interpretation),
+a cornerstone principle of intuitionistic type theory.
 
 1928 [Entscheidungsproblem](https://en.wikipedia.org/wiki/Entscheidungsproblem) (Hilbert and Ackermann).
 An outgrowth of Hilbert's program, this decision problem challenge looks for an algorithm that considers, as input, 
@@ -84,8 +85,20 @@ Further, such a system could not prove its own consistency;
 it cannot prove the consistency of anything stronger with certainty.
 This result was cataclysmic, resulting in the doom of Hilbert's program.
 
+1932 *Symbolic Logic* (Lewis). This introduced five systems of modal logic to predicate calculus,
+qualifying the truthfulness of a proposition by some notion of possibility or necessity.
+
 1934 [Combinatory Logic](https://en.wikipedia.org/wiki/Combinatory_logic) (Curry).
-Howard Curry observes that the types of the combinators could be seen as axiom-schemes for intuitionistic implicational logic.
+Haskell Curry observes that the types of the combinators 
+could be seen as axiom-schemes for intuitionistic implicational logic.
+
+1935 [Natural Deduction](https://en.wikipedia.org/wiki/Natural_deduction) and 
+[Sequent Calculus](https://en.wikipedia.org/wiki/Sequent_calculus) (Gentzen).
+These equivalent systems substantially improved the notation and structure of proofs.
+They proposed  ∀ for universal quantification, introduced normalization,
+and showed that proof rules come in pairs (introduction and elimination).
+Even though sequent calculus was invented to introduce cut elimination to natural deduction, 
+both systems thrive.
 
 1936 [Church-Turing Thesis](https://en.wikipedia.org/wiki/Church%E2%80%93Turing_thesis).
 Alonzo Church and Alan Turing independently reproduce Gödel’s result using their own formalisms.
@@ -108,10 +121,10 @@ the notational and procedural advances made to formal logic and reasoning
 were immensely valuable and are still relevant.
 No less valuable was learning from Gödel that there are inscrutable
 limits to how much we can expect to accomplish with formal logic.
-We preserve this tradition when we pass nightmares on to the students
+We preserve this tradition when we pass nightmares on to those students
 we caution about the danger of [Turing-complete](https://en.wikipedia.org/wiki/Turing_completeness)
-programming languages (or even Conway's Game of Life).
-Let's return to this topic in another post.*
+programming languages (and Conway's Game of Life)!
+Let's return to this topic in a future post.*
 
 ## Programming Languages and Types ##
 
@@ -138,80 +151,246 @@ First high-level programming language to be designed for a computer.
 This started with support for numbers, but later versions added
 many data types, including array, complex numbers, and logical (1961).
 
-1958 [Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)) (McCarthy). 
-Dynamic-typed language supporting numbers, symbols and heterogeneous lists.
+1957 [Temporal Logic](https://en.wikipedia.org/wiki/Temporal_logic) (Prior).
+This adds invaluable qualifiers to modal logic to express concepts like
+always, eventually, and the sequential order of states.
 
-1958 Algol-58, followed later by Algol-60 and Algol-68.  the first language to combine seamlessly imperative effects with the (call-by-name) lambda calculus.
+1958 [Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)) (McCarthy).
+This lambda calculus-inspired dynamic-typed language 
+offered support for numbers, symbols and heterogeneous lists.
+In this, it improved on [IPL](https://en.wikipedia.org/wiki/Information_Processing_Language) (Newell and Simon).
 
-1958 System T (Godel) whose motivation was to obtain a relative consistency proof
+1958 [Algol-58](https://en.wikipedia.org/wiki/ALGOL) (team).
+This is the first language to combine seamlessly imperative effects 
+with the (call-by-name) lambda calculus.
+It started with numbers and arrays (supporting upper and lower subscript bounds).
+It was followed later by Algol-60 (where Backus-Naur form was introduced) and Algol-68.  
+
+1958 [System T](https://en.wikipedia.org/wiki/Dialectica_interpretation) (Gödel).
+His motivation was to obtain a relative consistency proof
 for Heyting arithmetic (and hence for Peano arithmetic).
-It was later used to build a model of Girard's refinement of intuitionistic logic known as linear logic
+It was later used to build a model of Girard's refinement of intuitionistic logic known as linear logic.
+Pure math work continues and Gödel continues to deliver.
 
-1958 Curry observes that a certain kind of proof system, referred to as Hilbert-style deduction systems, coincides on some fragment to the typed fragment of a standard model of computation known as combinatory logic.
+1958 *Combinatory Logic* (Curry). 
+This book observes that Hilbert-style deduction systems (proofs) coincide 
+to the typed fragment of combinatory logic (computations).
+A decade later, Howard rediscovers and elaborates on this important correspondence.
 
-1959 Cobol Programming Language (Hopper). Introduced record/product types, etc.
+1959 [Kripke Semantics](https://en.wikipedia.org/wiki/Kripke_semantics) (Kripke).
+These considerably enriched the useful formalisms of modal logic.
 
-1962-7 Simula (Dahl and Nygaard) supporting classes, inheritance, etc.
+1959 [Cobol](https://en.wikipedia.org/wiki/COBOL) (Hopper). Introduced records, along
+with other familiar datatypes.
 
-1964 Basic Programming Language (Kemeny and Kurtz). Support for numbers, matrices and strings
+1962-7 [Simula](https://en.wikipedia.org/wiki/Simula) (Dahl and Nygaard).
+The progenitor of object-oriented languages introduced classes, inheritance, etc.
 
-1966 APL (Iverson) Array programming language
+1964 [Basic](https://en.wikipedia.org/wiki/BASIC) (Kemeny and Kurtz). 
+A novice-friendly language supporting numbers, matrices and strings.
+
+1966 [APL](https://en.wikipedia.org/wiki/APL_(programming_language)) (Iverson).
+Array programming language with an unusual collection of succinct operators.
 
 ## From Type Algebra to the Lambda Cube
 
-1969 Curry-Howard Correspondence. Howard observes that a "high-level" proof system, referred to as natural deduction, can be directly interpreted in its intuitionistic version as a typed variant of the model of computation known as lambda calculus
+*The switch in sections reflects no pace change in the introduction
+of influential languages and their type systems. It is sparked by
+the explosively catalytic re-realization of the deep connection between
+natural deduction (proof systems) and intuitionistic (calculation) systems and, later,
+typed lambda calculus. The exciting implications of this result led to
+a rapidly deepening formalization of type theory as a robust, distinct academic discipline.
+Increasingly, we see insights flow back-and-forth not only
+between type theory and programming languages (and theorem provers), 
+but also between type theory and related branches of mathematics, 
+such as category theory, topology, and abstract algebra.*
 
-1972+ C programming language (Ritchie). Integers, pointers, array, struct, union, etc.
+1969 [Curry-Howard Correspondence](https://en.wikipedia.org/wiki/Curry%E2%80%93Howard_correspondence).
+Howard's notes highlight the tight correspondence between the natural deduction connectives &, ∨, ⊃ 
+and the intuitionistic, computational types ×, +, → 
+(product, sum, and lamba types),
+as well as demonstrating the correspondence of cut elimination to normalization.
+It goes on to propose new types that correspond to
+the predicate quantifiers ∀ and ∃, now called dependent types.
+Although not published until 1980, this was known by and influenced the work of
+Martin-Löf, Girard, Coquand, and others. 
+Wadler's paper [Propositions as Types](https://homepages.inf.ed.ac.uk/wadler/papers/propositions-as-types/propositions-as-types.pdf)
+offers an invaluable summary of the historical context and impact of Howard's insight.
 
-1972-4 System F (Girard and Reynolds) Polymorphic Lambda Calculus. 2nd order lambda calculus
+1969 [Hoare Logic](https://en.wikipedia.org/wiki/Hoare_logic).
+A formal system for reasoning rigorously about the correctness of programs.
 
-1973 ML language (Milner). Hindley-Milner type inference system, pattern matching, first-class functions, tuples, lists, integers. 1978: parameterized types (post-CLU). 1980 ref type 
+1971-79 [Intuitionistic Type Theory](https://en.wikipedia.org/wiki/Intuitionistic_type_theory) (Martin-Löf).
+Building off the BHK Interpretation and inspired by the Curry-Howard Correspondence,
+this establishes an intuitionistic (vs. classical) system for type theory.
+It derives its power from just three types (0, 1, 2) and five constructors
+(Σ, Π, =, inductive, and universes), making possible dependent type judgments.
 
-1974 CLU programming language (Liskov). Parameterized types with constraints (generics), abstract data types, variant types, classes, iterators, exception handling, etc.
+1972 [C](https://en.wikipedia.org/wiki/C_(programming_language)) (Ritchie). 
+This systems language supported pointers, struct, union, ,and array datatypes.
+It took nearly three decades to formalize a logic around the safe use of pointers.
 
-1975 Scheme (Steele and Sussman)
+1972-4 [System F](https://en.wikipedia.org/wiki/System_F) (Girard and Reynolds)
+adds universal quantification (polymorphism) to typed lambda calculus.
+Intriguingly, this makes type inference undecidable.
 
-1979-82 Intuitionistic Type Theory (Martin-Lof) addressing dependent type judgments
+1973 [ML language](https://en.wikipedia.org/wiki/ML_(programming_language)) (Milner).
+ML is the progenitor of type theory-based programming languages.
+Its types closely mirror those of type theory and its ongoing
+improvements helped influence the evolution of type theory and 
+the [LCF](https://en.wikipedia.org/wiki/Logic_for_Computable_Functions) theorem prover.
+Among its initial innovations were the Hindley-Milner type system, pattern matching, 
+first-class functions, sum types, and product type tuples.
+Data types were later broadened to parameterized types (1978) and ref types (1980).
 
-1983+ Standard ML: labelled records/unions, module system (MacQueen) 
+1974 [CLU](https://en.wikipedia.org/wiki/CLU_(programming_language)) (Liskov).
+This language was first to introduce parameterized types with constraints (generics)
+and abstract data types. It also featured variant types, classes, 
+iterators, exception handling, and more.
 
-1984 Common Lisp
+1975 [Scheme](https://en.wikipedia.org/wiki/Scheme_(programming_language)) (Steele and Sussman).
+This Lisp dialect strengthed the recursive nature of functional programming
+with tall-call optimization. It also introduced first-class continuations,
+later tied back using type theory to Pierce's law in classical logic.
 
-1985 C++ (Stroustrup)
+1978 [Communicating Sequential Processes](https://en.wikipedia.org/wiki/Communicating_sequential_processes) (Hoare),
+a formal language for describing patterns of interaction in concurrent systems.
 
-1985 Structure and Interpretation of Computer Programs (Abelson and Sussman) Influential textbook, with Scheme at its core
+1980 [Calculus of Communicating Systems](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems) (Milner),
+which models indivisible communications between two participants. This was later expanded to become
+[π-calculus](https://en.wikipedia.org/wiki/%CE%A0-calculus).
+[Session types](http://simonjf.com/2016/05/28/session-type-implementations.html) for channels/protocols arise from process calculi.
 
-1987 Linear Logic (Girard) 1990 Linear Types can change the world (Wadler)
+1980 [Smalltalk](https://en.wikipedia.org/wiki/Smalltalk) (Kay).
+Inspired by Simula, this dynamically-typed, object-oriented language facilitated
+Xerox Parc's innovations that fundamentally transformed how we interact with computers.
+Its message passing architecture helped inspire 
+the [actor model](https://en.wikipedia.org/wiki/Actor_model),
+which went on to influence π-calculus.
 
-1989 Coq (Coquand) Interactive theorem prover
+1983+ [Standard ML](https://en.wikipedia.org/wiki/Standard_ML).
+This improved dialect added MacQueen's lauded module system (structures, signatures and functors),
+as well as labelled records and unions.
 
-1990 Definition of SML (Milner, Tofte, Harper)
+1985 [C++](https://en.wikipedia.org/wiki/C%2B%2B) (Stroustrup).
+Initially, a C dialect that added rich object-oriented abstractions.
 
-1990 Haskell programming language (many) pure, lazy language, w/ type classes (Wadler)
+1985 [Structure and Interpretation of Computer Programs](https://en.wikipedia.org/wiki/Structure_and_Interpretation_of_Computer_Programs)
+(Abelson and Sussman) This influential textbook used Scheme to
+teach about fundamental principles of recursion, abstraction, state, modularity,
+and programming language design and implementation.
 
-1991 Lambda Cube (Berendregt)
+1986 [Erlang](https://en.wikipedia.org/wiki/Erlang_(programming_language)) (Armstrong).
+A general-purpose, concurrent, functional programming language
+which supports distributed, high-availability applications 
+using immutable, garbage-collected data and message-passing processes (actors).
 
-1994 System F< (Cardelli) Lambda calculus with subtyping
+1987 [Linear Logic](https://en.wikipedia.org/wiki/Linear_logic) (Girard).
+This substructural logic applies contraction and weakening rules to sequent calculus.
+Its potential for deterministic resource management was heavily boosted in Wadler's papers
+(e.g., *Linear Types can change the world*).
+
+1987 [Behavioral Subtyping](https://en.wikipedia.org/wiki/Liskov_substitution_principle) (Liskov).
+Influenced by Hoare Logic and inspired by object-oriented languages,
+this logic formalizes the semantic interoperability of types in a hierarchy.
+
+1988 [Effect Systems](https://en.wikipedia.org/wiki/Effect_system) (Lucassen and Gifford).
+Proposes the use of annotations that support a compile-time check 
+of the computational side-effects of a program.
+
+1989 [Calculus of Constructions](https://en.wikipedia.org/wiki/Calculus_of_constructions) (Coquand).
+Yet another formal system of type theory based on higher-order typed lambda calculus.
+It forms the basis behind the [Coq](https://en.wikipedia.org/wiki/Coq)
+interactive theorem prover.
+
+1990 *Definition of SML* (Milner, Tofte, Harper).
+The first formal specification of a widely-used language,
+presented in terms of its grammar, typing rules and operational semantics.
+
+1990 [Haskell](https://en.wikipedia.org/wiki/Haskell_(programming_language)) (Wadler)
+A general-purpose, statically typed, purely functional programming language 
+with type inference, lazy evaluation, and ad hoc polymorphism (type classes).
+Haskell made monads, used for managing side effects in a pure way, famous.
+
+1991 [Lambda Cube](https://en.wikipedia.org/wiki/Lambda_cube) (Berendregt).
+This cube organized various lambda systems along three axes, corresponding
+to the binding between types and terms: polymorphism (terms bind types),
+dependent types (types bind terms), and type operators (types bind types).
+
+1991 [Refinement Types](https://en.wikipedia.org/wiki/Refinement_type) (Freemand and Pfenning).
+A predicate-based extension of behavioral subtyping for preconditions and postconditions.
+
+1994 [System F<](https://en.wikipedia.org/wiki/System_F-sub) (Cardelli).
+This expands System F lambda calculus with subtyping for parametric polymorphism
+and record subtyping.
+
+*At this point, much of the core foundation for type theory have been poured.
+Type theory is revealed to be not a singular theory,
+but a diverse and inclusive family comprised of many formal systems,
+including not only several flavors of lambda cube systems (classical and intuitionistic),
+but also process calculi, subtyping, linear logic, modal/temporal logic, effect systems,
+and separation logic (future).*
 
 ## Going Mainstream ##
 
-1996 OCaml (Leroy et al) SML with object-oriented capabilities
+*When history gets recent, it becomes harder to discern what milestones
+represent far-reaching influence. That said, let's highlight several events
+that not only demonstrate further development of type theory and unique
+application of type systems to programming languages and proof systems,
+but also mention influential resources that broaden awareness of these rich and powerful tools.*
 
-1997 Region-Based Memory Management (Tofte and Talpin) Also MLkit
+1997 [Region-Based Memory Management](https://en.wikipedia.org/wiki/Region-based_memory_management)
+(Tofte and Talpin). This work, implemented using a dialect of ML called MLkit,
+demonstrated new static-based inference and analysis techniques for rapidly allocating
+objects in arena-based regions that outlive their static scope.
 
-1999+ ATS programming language (Xi) designed to unify programming with formal specification
+1999 [ATS](https://en.wikipedia.org/wiki/ATS_(programming_language)) (Xi).
+This unifies programming with formal specification, combining compile-time theorem proving
+with advanced type systems (including dependent and linear types).
 
-2000-2002 Separation Logic (Reynolds et al)
+2000 [Separation Logic](https://en.wikipedia.org/wiki/Separation_logic) (Reynolds et al).
+This work formalized local reasoning about safe reference-based
+use of shared, mutable memory areas, facilitating information hiding,
+transfer of ownership, and virtual separation between concurrent modules.
+This logic can help verify programming languages that offer versatile
+reference-based memory and data race safety mechanisms.
 
-2002 Types and Programming Languages (Pierce). Popular textbook.
+2002 *Types and Programming Languages* (Pierce). 
+This highly-recommended textbook provides a comprehensive introduction to type systems
+and the basic theory of programming languages.
+It covers simple types, subtyping, recursive types, polymorphism, and higher-order systems.
 
-2006+ Homotopy Type Theory (Voevodsky and many others)
+2006 [Homotopy Type Theory](https://en.wikipedia.org/wiki/Homotopy_type_theory) (Voevodsky et al).
+This promising technique links topology to type theory,
+using paths to explore deeper notions of equivalence.
 
-2006 Cyclone (Grossman et al), A safe C dialect with regions (including linear)
+2006 [Cyclone](https://en.wikipedia.org/wiki/Cyclone_(programming_language)) (Grossman et al).
+This research project built a safe C dialect that used higher-order types,
+linear logic, and region polymorphism to statically remove many safety holes in C.
 
-2007 Idris (Brady) Pure FP language for dependent types
+2007 [Idris](https://en.wikipedia.org/wiki/Idris_(programming_language)) (Brady) 
+A Haskell-like purely functional, lazy programming language that supports dependent types
+and can be used as a proof assistant.
 
-2010 Rust (Hoare et al)
+2007 [Agda](https://en.wikipedia.org/wiki/Agda_(programming_language)) (Norell & Coquand).
+This is a dependently typed functional programming language that can also be used
+as a proof assistant, where proofs are written in a functional programming style.
 
-2012 Practical Foundations for Programming Languages (Harper). Standard textbook
+2010 [Rust](https://en.wikipedia.org/wiki/Rust_(programming_language)) (Hoare et al)
+An increasingly popular and safe systems language that
+heavily leverages linear logic, lifetimes, and fearless concurrency.
+
+2012 *Practical Foundations for Programming Languages* (Harper). 
+Another highly-recommended textbook that not only deeply covers type systems,
+but also dynamics, classes and inheritance, control flow, mutable state,
+parallelism/concurrency, and modularity.
+
+2015 [Pony](https://www.ponylang.io/) (Clebsch).
+This actor-based programming language offers a unique collection of
+object and reference capabilities and a lockless design
+to offer proven safety guarantees.
  
+2020 [Granule](https://granule-project.github.io/).
+A functional programming language based on the linear λ-calculus 
+augmented with graded modal types, 
+inspired by the coeffect-effect calculus of Gaboardi et al..

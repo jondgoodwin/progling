@@ -320,7 +320,9 @@ These differences can be ignored during parsing, and then flagged as errors
 during semantic analysis, when we know which is expected.
 
 Another fortunate development is that the two grammars do not
-differ in terms of operator precedence.
+differ in terms of operator precedence. 
+Prefix operators bind more closely than infix operators.
+Thus `?&i32, f32` is equivalent to `(?(&i32)), f32` and not `?(&(i32, f32))`.
 
 To change the compiler to support the fusion of expression grammars,
 changes are needed to several passes:
@@ -335,10 +337,17 @@ changes are needed to several passes:
   which can later be specialized to either a DerefNode or PtrNode.
   
 - The name resolution pass is when we determine whether a node is part of a type
-  vs. value expression. Since any name resolves to its declaration,
-  this is all we need to know whether the name is for a type vs. a variable.
-  Similarly, a StarNode can be specialized to a PtrNode if the inner expression
-  is a type, otherwise it specializes to a DerefNode.
+  vs. value expression. This is a bottoms-up process.
+  So, for the expression `*i32, f32`, we begin at the bottom-most nodes,
+  which are always going to be name-based. Since the declarations for
+  named variables, functions and types look nothing alike, it is easy
+  to determine that `i32` and `f32` are both types.
+  Knowing this, we now know that `*i32` must therefore be a type,
+  which we mark by specializing the StarNode to a PtrNode, rather than a DerefNode.
+  Lastly, we now know that `?i32, f32` must also be a type, since both
+  elements of the tuple are types.
+  A tuple's expressions must always be either all types or all value-based expressions,
+  or else a compiler error is produced.
   
 - The type check pass is when we can verify whether any specific expression
   node is expected to be a type vs. value node, based on the context of where
