@@ -51,8 +51,9 @@ Following Gottlob Frege and Bertrand Russell, Hilbert sought to
 define mathematics logically using the method of formal systems.
 
 1901 [Russell's paradox](https://en.wikipedia.org/wiki/Russell%27s_paradox).
-Russell demonstrates that propositions in Georg Cantor's set theory can lead
-to contradiction. If R is the set of all sets that are not members of themselves,
+Russell demonstrates that Frege's axiom of unrestricted comprehension 
+(as applied to Georg Cantor's set theory) can lead to contradiction. 
+If R is the set of all sets that are not members of themselves,
 R can neither be a member of itself, nor can it not.
 
 1908 [Russell's theory of types](https://en.wikipedia.org/wiki/Type_theory#History).
@@ -70,7 +71,7 @@ This is an outgrowth of Hilbert's second problem.
 1925 *On the principle of the excluded middle* (Kolmogorov).
 showing that formal logic statements can be formulated using 
 [intuitionistic logic](https://en.wikipedia.org/wiki/Intuitionistic_logic).
-Along with independent work, this is now known as the
+Along with independent work by Brouwer and then Heyting, this is now known as the
 [Brower-Heyting-Kolmogorov Interpretation](https://en.wikipedia.org/wiki/Brouwer%E2%80%93Heyting%E2%80%93Kolmogorov_interpretation),
 a cornerstone principle of intuitionistic type theory.
 
@@ -80,7 +81,7 @@ a statement and answers "Yes" or "No" according to whether the statement is univ
 
 1931 [Gödel’s Incompleteness Proof](https://en.wikipedia.org/wiki/G%C3%B6del%27s_incompleteness_theorems).
 Kurt Gödel proves that any consistent formal system supporting elementary arithmetic 
-is incomplete: statements in this system can neither be proved nor disproved.
+is incomplete: some statements in this system can neither be proved nor disproved.
 Further, such a system could not prove its own consistency; 
 it cannot prove the consistency of anything stronger with certainty.
 This result was cataclysmic, resulting in the doom of Hilbert's program.
@@ -89,7 +90,8 @@ This result was cataclysmic, resulting in the doom of Hilbert's program.
 qualifying the truthfulness of a proposition by some notion of possibility or necessity.
 
 1934 [Combinatory Logic](https://en.wikipedia.org/wiki/Combinatory_logic) (Curry).
-Haskell Curry observes that the types of the combinators 
+Haskell Curry observes that the types of the combinators (building on earlier work
+by Schönfinkel dating from 1924)
 could be seen as axiom-schemes for intuitionistic implicational logic.
 
 1935 [Natural Deduction](https://en.wikipedia.org/wiki/Natural_deduction) and 
@@ -102,7 +104,7 @@ both systems thrive.
 
 1936 [Church-Turing Thesis](https://en.wikipedia.org/wiki/Church%E2%80%93Turing_thesis).
 Alonzo Church and Alan Turing independently reproduce Gödel’s result using their own formalisms.
-Church, inventing [lambda calculus](https://en.wikipedia.org/wiki/Lambda_calculus), 
+Church, inventing [lambda calculus](https://en.wikipedia.org/wiki/Lambda_calculus) four years earlier, 
 proves that Hilbert's Entscheidungsproblem is unsolvable.
 Turing's theorem, based on the [Turing Machine](https://en.wikipedia.org/wiki/Turing_machine), 
 shows that there is no algorithm 
@@ -156,15 +158,16 @@ This adds invaluable qualifiers to modal logic to express concepts like
 always, eventually, and the sequential order of states.
 
 1958 [Lisp](https://en.wikipedia.org/wiki/Lisp_(programming_language)) (McCarthy).
-This lambda calculus-inspired dynamic-typed language 
+This lambda calculus-influenced dynamic-typed language 
 offered support for numbers, symbols and heterogeneous lists.
 In this, it improved on [IPL](https://en.wikipedia.org/wiki/Information_Processing_Language) (Newell and Simon).
 
 1958 [Algol-58](https://en.wikipedia.org/wiki/ALGOL) (team).
-This is the first language to combine seamlessly imperative effects 
-with the (call-by-name) lambda calculus.
-It started with numbers and arrays (supporting upper and lower subscript bounds).
-It was followed later by Algol-60 (where Backus-Naur form was introduced) and Algol-68.  
+This highly influential language started with numbers and arrays
+(supporting upper and lower subscript bounds), and was the first to introduce
+code blocks and nested function definitions with lexical scope.
+It was followed later by the more influential Algol-60 
+(which introduced call-by-name and Backus-Naur form) and Algol-68.  
 
 1958 [System T](https://en.wikipedia.org/wiki/Dialectica_interpretation) (Gödel).
 His motivation was to obtain a relative consistency proof
@@ -286,7 +289,9 @@ which supports distributed, high-availability applications
 using immutable, garbage-collected data and message-passing processes (actors).
 
 1987 [Linear Logic](https://en.wikipedia.org/wiki/Linear_logic) (Girard).
-This substructural logic applies contraction and weakening rules to sequent calculus.
+This logic applies structural rules (e.g., contraction and weakening) so that logical
+deduction can reason about resources within the logic itself,
+restricting their duplication or disposal.
 Its potential for deterministic resource management was heavily boosted in Wadler's papers
 (e.g., *Linear Types can change the world*).
 
@@ -324,7 +329,7 @@ A predicate-based extension of behavioral subtyping for preconditions and postco
 This expands System F lambda calculus with subtyping for parametric polymorphism
 and record subtyping.
 
-*At this point, much of the core foundation for type theory have been poured.
+*At this point, much of the core foundation for type theory has been poured.
 Type theory is revealed to be not a singular theory,
 but a diverse and inclusive family comprised of many formal systems,
 including not only several flavors of lambda cube systems (classical and intuitionistic),
@@ -378,7 +383,7 @@ as a proof assistant, where proofs are written in a functional programming style
 
 2010 [Rust](https://en.wikipedia.org/wiki/Rust_(programming_language)) (Hoare et al)
 An increasingly popular and safe systems language that
-heavily leverages linear logic, lifetimes, and fearless concurrency.
+heavily leverages affine logic (a variant of linear logic), lifetimes, and fearless concurrency.
 
 2012 *Practical Foundations for Programming Languages* (Harper). 
 Another highly-recommended textbook that not only deeply covers type systems,
