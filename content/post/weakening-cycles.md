@@ -19,13 +19,13 @@ that led to the [Rise of Type Theory](/post/rise-of-type-theory).
 Resolving Russell's paradox led to his theory of types.
 Gödel's Incompleteness theorems rested its proof around a variation of
 the [Liar Paradox](https://en.wikipedia.org/wiki/Liar_paradox).
-Church and Turing reformulated this result using their variant notations.
+Church and Turing recapitulated this result using their distinctive formalisms.
 Intuitionistic type theory was deliberately designed to avoid these paradoxes.
 And so it goes.
 
 As an undergraduate, I had the pleasure of studying Gödel's
 ingenious proof as part of a course on Predicate Logic.
-Later, I had the further pleasure of reading Douglas Hofstadter's
+Later, my pleasure was doubled by reading Douglas Hofstadter's
 delightful book [Gödel, Eschel, Bach: an Eternal Golden Braid](https://en.wikipedia.org/wiki/G%C3%B6del,_Escher,_Bach),
 which inventively ruminates on themes related to Gödel's result.
 All this left me wondering (as it does many), is there an underlying pattern
@@ -139,17 +139,17 @@ cannot statically determine which alias will be the last to expire, we require
 a memory management strategy that can determine this at runtime,
 so that allocated memory can be safely recycled.
 And thus, to satisfy our need for large, transient, complex, shared "ownership" data structures,
-we are forced into reaching for some variation of runtime garbage collection,
+we are forced to reach for some variation of runtime garbage collection,
 based on reference-counting, tracing, or both.
 
 So what does all this have to do with cycle weakening?
 It's pretty straightforward:
 when you allow multiple references to the same object,
 reference cycles become possible, where one object references another, which references
-another, eventually returning via some reference to the original object.
+another, eventually returning, via some reference, to the original object.
 It is well known that reference counting struggles
 in the presence of such [reference cycles](https://en.wikipedia.org/wiki/Reference_counting#Dealing_with_reference_cycles). 
-These cycles effectively keep every object in the cycle
+Such cycles effectively keep every object in the cycle
 alive forever. And so memory leaks.
 
 An effective solution to leaky cycles involves weakening every cycle, literally.
@@ -192,7 +192,7 @@ This is a straightforward example of a
 What we have created is a resource dependency cycle, one that
 can never terminate unless we weaken the cycle somehow.
 In 1965, Edsger Dijkstra formulated a version of this challenge
-in terms of the [Dining Philosophers](https://en.wikipedia.org/wiki/Dining_philosophers_problem).
+using [Dining Philosophers](https://en.wikipedia.org/wiki/Dining_philosophers_problem).
 Each philosopher needs to eat their bowl of spaghetti, but can only do so
 using both forks placed on either side of their bowl.
 The problem is each fork is shared with their neighboring philosopher around the table.
@@ -226,8 +226,8 @@ With this background in hand, we can now see a clear pattern in the
 cycle weakening solutions that theoreticians have applied to encountered paradoxes:
 
 - Russell addressed his [paradox](https://en.wikipedia.org/wiki/Russell%27s_paradox)
-  (if R is the set of all sets that are not members of themselves,
-  R can neither be a member of itself, nor can it not)
+  (*if R is the set of all sets that are not members of themselves,
+  R can neither be a member of itself, nor can it not*)
   by formulating his ramified theory of types, which weakens allowed relationships between sets. 
   Essentially, this theory of types establishes a partial order on entities. 
   An entity of some type can only be built up from entities of a lower type,
@@ -238,18 +238,68 @@ cycle weakening solutions that theoreticians have applied to encountered paradox
 - Alonzo Church invented 
   the [simply-typed lambda calculus](https://en.wikipedia.org/wiki/Simply_typed_lambda_calculus)
   to address the Kleene-Rosser paradox, which showed that certain systems of formal logic, 
-  including Church's untyped lambda calculus, are undecidable.
+  including formalizations using Church's untyped lambda calculus, are inconsistent.
   This too applies a Russell-inspired hierarchy of types to
   weaken cycles in the lambda calculus.
   
-- The intuitionistic type theory that arose from Brouwer, Heyting, Kolmogorov,
-  and Martin-Löf is built on a structure carefully designed to avoid
-  paradoxical constructions. Law of Excluded Middle. arithmetic.
+- The [intuitionistic type theory](https://en.wikipedia.org/wiki/Intuitionistic_type_theory)
+  that arose from Brouwer, Heyting, Kolmogorov, and Martin-Löf 
+  is designed to carefully avoid paradoxical constructions.
+  Here are two examples. By rejecting the
+  [Law of Excluded Middle](https://en.wikipedia.org/wiki/Law_of_excluded_middle),
+  intuitionistic logic avoids having to represent paradoxes that are neither true nor false.
+  Instead, it uses the 1-type to represent things we can demonstrate exist, and the 0-type to
+  represent anything that does not exist, including anything unprovable (e.g, a paradox).
   
-- 1ML and undecideable type inference
+    Another example is its use of inductive types, enabling the definition of
+	natural numbers as a partial order. Each number is a successor of the previous number,
+	beginning with 0.
+	Inductive types can be self-referential, 
+	but usually only in a way that permits structural recursion, 
+	which weakens recursion (cycles) to avoid paradoxes.
+  
+	Handling recursion successfully is so important,
+	that mathematics and logic distinguish between predicativity and impredicativity.
+	An impredicative definition is self-referencing. A predicative definition is not.
+	Intuitionistic theory is designed to be predicative.
 
+For my final example, let's discuss Standard ML's modules.
+Modules are a separate language grafted on to the core ML language,
+enabling considerable richness to modular constructions that support
+improved reusability of code in an elegant, isolated way.
+As great as they can be, people keep looking for ways to improve on
+SML's modules, such as enabling support for the sort of ad hoc polymorphism offered
+by Haskell's type classes.
+
+Andreas Rossberg proposed a new language, 
+[1ML](https://people.mpi-sws.org/~rossberg/1ml/1ml.pdf), that went further.
+His objective was to integrate ML's modules and core language into a single language,
+and make modules first class, so that they can be passed around like values.
+This means there is no difference between functions, functors, and type constructors,
+and similarly no difference between structures, records and tuples.
+The paper observes that the syntactic distinction between the core and module languages
+is just a coarse way to enforce predicativity for module types.
+1ML replaces this syntactic weakening of cycles
+with a more surgical semantic restriction.
+To preserve predicativity (ensuring decidability in type inference),
+1ML imposes the constraint that "during subtyping (aka signature matching) the type **type** 
+can only be matched by small [monomorphic] types,
+which are those that do not themselves contain the type **type**."
+
+That sounds exactly like weakening cycles so that type inference becomes decidable,
+while also ensuring a more powerful module and type system.
+
+## The Moral of the Story ##
+
+As with diamond cutting, the skill lies not with knowing it needs to be weakened,
+but in knowing where to tap the cleaver to maximize its value.
+
+So, the next time you encounter Turing setting out on another endless marathon,
+offer to him a bicycle whose wheels have been skillfully weakened 
+through the application of a finite partial order,
+to ensure he will halt in time for tea.
 
 -----
 
-<sup>1</sup> You did not think I was going to write a post and not mention
+<sup>1</sup> You did not think I was going to write a post and not reference
 [Cone](http://cone.jondgoodwin.com/), did you?
