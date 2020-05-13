@@ -393,7 +393,7 @@ Cone's type semantics.
 Since "practical" subtyping turns out to be
 unexpectedly richer than the standard type-theoretic treatment of subtyping,
 I intend to explore it more thoroughly in my 
-[next post](/post/practical subtyping).
+[next post](/post/practical-subtyping).
 
 Until then, let me briefly summarize the relevance of subtyping to reference quantum entanglement.
 It arises from the fact that we normally want subtyping to be applied
