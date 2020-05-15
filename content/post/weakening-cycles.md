@@ -47,7 +47,7 @@ And we not only run into it often, we regularly overcome it as well,
 and do so without having to give up recursion!
 Best of all, there is a pattern to how we overcome these "paradoxes".
 
-This post begins by demonstrating these patterns using arithmetic functions.
+This post<sup>1</sup> begins by demonstrating these patterns using arithmetic functions.
 It then illustrates how the same principles apply to memory management and deadlocks.
 The final section shows how these principles have been invaluable
 in helping us evolve the power of our theoretical tools.
@@ -63,7 +63,7 @@ can be formulated that can answer this question across all possible programs.
 Once we re-frame the challenge in terms of termination,
 it is obvious that any program without loops or recursion will terminate,
 since a program consists of a finite number of operations that are all executed
-exactly once, in order<sup>1</sup>:
+exactly once, in order<sup>2</sup>:
 
     imm x = 5
 	imm y = x * 3
@@ -223,7 +223,8 @@ weakening of resource dependency cycles.
 ## Type Inference ##
 
 With this background in hand, we can now see a clear pattern in the
-cycle weakening solutions that theoreticians have applied to encountered paradoxes:
+cycle weakening solutions that theoreticians have applied 
+to encountered paradoxes<sup>3</sup>:
 
 - Russell addressed his [paradox](https://en.wikipedia.org/wiki/Russell%27s_paradox)
   (*if R is the set of all sets that are not members of themselves,
@@ -301,5 +302,20 @@ to ensure he will halt in time for tea.
 
 -----
 
-<sup>1</sup> You did not think I was going to write a post and not reference
+<sup>1</sup> Someone submitted this post to
+[Hacker News](https://news.ycombinator.com/item?id=23185525#23189095).
+How wonderful to read all the additional insights and connections shared by others!
+
+<sup>2</sup> You did not think I was going to write a post and not reference
 [Cone](http://cone.jondgoodwin.com/), did you?
+
+<sup>3</sup> To my delight, @user has since shared an nlab link 
+on the [diagonal argument](https://ncatlab.org/nlab/show/diagonal+argument).
+It references Lawvere's proof, using category theory,
+that these historical examples (and Cantor's diagonal theorem)
+are deeply equivalent.
+Yanofsky offers a [more-digestible explanation](https://arxiv.org/pdf/math/0305282.pdf)
+of Lawvere's correspondence.
+Wouldn't it be exciting if someone were to formally demonstrate that
+memory reference cycles and deadlock challenges were also
+part of this deeper equivalence?
