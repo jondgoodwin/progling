@@ -209,11 +209,11 @@ a required fork already acquired by other also-waiting philosophers.
 
 It is worth pointing out that deadlocks may occur even in the absence of locks.
 This is important because programming languages that make no use of locks,
-such as Pony, can still experience deadlocks.
+such as Pony, can still experience deadlocks.<sup>5</sup>
 By carefully modeling each dining philosopher and fork using distinct actors
 that synchronize by sending messages to each other,
 it becomes clear that at some point the philosopher actors just end up
-silently waiting on messages that will never arrive.
+silently waiting on resource acquisition messages that will never arrive.
 This state of waiting and never progressing forward
 is as much a deadlock as contention over locked resources.
 And thus, even in a language without locks,
@@ -398,3 +398,54 @@ of Lawvere's correspondence.
 <sup>4</sup> I am grateful to Threewood, whose skepticism and clear thinking
 challenged me to be more precise about these mechanisms and examples.
 
+<sup>5</sup> Pony makes a strong claim about being deadlock-free: 
+"It’s deadlock free. This one is easy, because Pony has no locks at all! 
+So they definitely don’t deadlock, because they don’t exist." 
+
+This part of the claim is true: it makes no use of locks, not in the runtime 
+and none are surfaced to the Pony programmer. 
+The only synchronization mechanism that Pony makes use of is the MPSC queues 
+that make possible message passing between actors. 
+Each actor has its own queue, and it is only "active" when it has messages 
+on its queue that need to serviced. The work-stealing scheduler will give every 
+actor with messages an opportunity to process at least one message. 
+When it does so, it never blocks and (hopefully) finishes with no requirement 
+to return a result to any other actor (although it may be pass messages to other actors if it wishes).
+
+Here is Wikipedia's definition of a deadlock: 
+"a deadlock is a state in which each member of a group is waiting for another member, 
+including itself, to take action, such as sending a message or more commonly releasing a lock". 
+In other words, deadlocks can occur not only because of locks (which Pony does not have), 
+but also because of waiting on another actor to send a message. 
+The wiki article lists four conditions for a deadlock, which (it turns out) 
+can also occur in a message-passing architecture.
+
+How would Pony trigger this sort of deadlock? 
+Consider implementing the dining philosophers problem in Pony by having the main actor 
+spawn five fork actors (with on-table state) and then five philosopher actors, 
+telling each the fork actor to their left and the fork actor to their right. 
+The philosopher actors all wake up hungry, so they reach for their left fork first, 
+by sending it an acquire message and then effectively suspend. 
+If the left fork A is in on-table state, it changes its state to indicate 
+it has been acquired by a specific philosopher and sends a message back 
+to the philosopher to say it has been acquired. 
+That reactivates the philospher to now send an acquire message to the right fork B. 
+But maybe by this point in time another philosopher has already acquired 
+that right fork B as its left fork! So it sends a message back 
+to the requesting philosopher to say it is not currently available to be acquired, try again later.
+
+The implications of this are clear, although every philosopher 
+is getting activated by messages regularly, at a certain point in time 
+it is possible that meaningful forward progress can cease for at least one philosopher. 
+At least some philosophers will starve, because they become deadlocked 
+in not being able to get two forks needed to eat, 
+because they are effectively contending over access to shared resources.
+
+The situation is semantically equivalent to when we use locks for forks instead. 
+And if we apply Dijkstra's partial order to how the philosopher actors 
+acquire their forks in an actor-based message passing architecture, 
+the deadlock risk vanishes and all the philosophers have a reasonable chance, 
+eventually, to eat and therefore guarantee eventual forward progress.
+
+Technically, one might choose to call this livelock, vs. deadlock,
+but the overall damage is the same, and livelocks can be even harder to diagnose.
