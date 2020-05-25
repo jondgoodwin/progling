@@ -300,10 +300,88 @@ offer to him a bicycle whose wheels have been skillfully weakened
 through the application of a finite partial order,
 to ensure he will halt in time for tea.
 
+## Coda: Formalizing the Partial Order Pattern ##
+
+This post confused some readers. Some thought I claimed a way to overcome
+Godel's and Turing's result. No, I stand by their work.
+That said, Turing's result still allows for the fact that *some*
+programs can be proven to terminate (or proven to never terminate).
+It is these specific programs that I focus on (rather than the programs
+that Turing based his results on and which Lawvere's proof unifies
+as equivalent using category theory and the diagonal argument).
+
+Another point of confusion revolved around the lack of a formal treatment
+for the pattern I describe, making it seem as if the pattern (and examples) were
+too vaguely described to warrant being an observation with substance.
+Let's see if we close that gap beginning with a more precise description of
+how to apply a "partial order" solution to weaken cycles so as to guarantee termination<sup>4</sup>:
+
+1. Each cycle/loop has a testable exit condition that causes the loop to cease.
+2. The testable exit condition operates on some varying state in the cycle.
+3. The collection of all cycle-termination states can be mapped cleanly 
+   to a finite set of abstract states.
+4. The abstract states are organized as a partial order, such that each is greater
+   than or less than the others transitively.
+5. Every iteration of the cycle moves that abstract state from a greater value to a lesser value.
+6. The cycle terminates when it reaches the lowest abstract state.
+
+I suspect this description is specific enough that a formal proof
+could be constructed (very different to Lawvere's!) showing that conformance to all of these
+criteria would be sufficient to guarantee termination.
+Furthermore, it should also be possible to demonstrate that certain
+relaxations of these restraints could also guarantee termination.
+For example, the fifth constraint could be relaxed from "every iteration" to
+"A finite number of iterations".
+Similarly, the fourth constraint could be reworded to allow multiple directed
+paths to (possibly multiple) end state(s), so long as discrete forward progress
+is nonetheless guaranteed over some finite number of steps.
+
+Today, the Collatz conjecture is not proven to terminate.
+However, were we some day able to formally map the rapidly vacillating integer
+conditional states to a partial order, it should then be possible
+to prove it.
+However, it is also possible that some future proof of the Collatz conjecture
+will not be equivalent to the terminating analysis on an abstract topology map.
+Time will tell.
+
+Usefully, we can use another variation of these criteria
+to guarantee that certain programs will *never* terminate.
+In particular, we could change the last two criteria
+to indicate that progress along the directed graph of states
+will never arrive at the lowest exit state for some values.
+This can happen because we can show that forward progress requires
+an infinite number of steps, or that certain paths never end
+up at an exit state (as shown earlier with the lookForZero function).
+
+One might wonder how this formalization of partial order applies to the
+garbage collection examples I cited earlier. With tracing GC, it
+is pretty straightforward.
+If the tracing GC collector does not color memory as it traces and marks, 
+it would follow the reference cycles forever and therefore never terminate.
+The colors apply a partial order to the references, 
+where the end state is that all references eventually turn black 
+(the terminating black state) and the tracing GC terminates, despite the presence of cycles.
+
+Applying the partial order to reference counting requires that we reframe the problem
+around termination. Imagine that we run our ref-counting program within another program
+called the Overlord. The overlord keeps track of all memory requested by our ref-counting program, 
+and will not allow the ref-counting program to terminate until it has freed all memory it requested.
+A ref-counting program with reference cycles and no/improper use of weak references will 
+fail to terminate.
+However, a ref-counting program that applies a partial order, 
+ensuring every reference cycle has at least one weak reference, 
+will terminate, because it will have successfully met our criteria 
+and have freed all memory that it allocated.
+So, when we look at reference-counted memory management in terms of getting the behavior we require
+(no memory is leaked), 
+and not just as a data structure requirement, 
+then it becomes possible to appreciate how the use of a partial order 
+to weaken all cycles guarantees the program terminates correctly.
+
 -----
 
 <sup>1</sup> Someone submitted this post to
-[Hacker News](https://news.ycombinator.com/item?id=23185525#23189095).
+[Hacker News](https://news.ycombinator.com/item?id=23185525).
 How wonderful to read all the additional insights and connections shared by others!
 
 <sup>2</sup> You did not think I was going to write a post and not reference
@@ -316,6 +394,7 @@ that these historical examples (and Cantor's diagonal theorem)
 are deeply equivalent.
 Yanofsky offers a [more-digestible explanation](https://arxiv.org/pdf/math/0305282.pdf)
 of Lawvere's correspondence.
-Wouldn't it be exciting if someone were to formally demonstrate that
-memory reference cycles and deadlock challenges were also
-part of this deeper equivalence?
+
+<sup>4</sup> I am grateful to Threewood, whose skepticism and clear thinking
+challenged me to be more precise about these mechanisms and examples.
+
