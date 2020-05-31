@@ -15,8 +15,42 @@ tags:
   - "Cone"
 ---
 
+Over two and half years ago, I described something I called
+[Gradual Memory Management](http://jondgoodwin.com/pling/gmm.pdf).
+Inspired by Rust and Pony, my paper proposed that it is feasible
+and desirable for a systems programming language to allow
+programs to exploit multiple memory management and permission strategies.
+Without putting memory and data race safety at risk, doing so would facilitate
+significant improvements to throughput and latency,
+even in multi-threaded architectures.
+
+It is easy to propose wild ideas in words. It is a lot of work to
+implement them, prove they work, and then demonstrate they add more value than cost.
+Before I could implement these ideas, I first needed to design 
+a compelling and compatible language ([Cone](http://cone.jondgoodwin.com/)),
+and then build enough of its compiler
+that it was ready to host the reference-based mechanisms described by the paper.
+That has taken years, and has been rewarding on its own.
+I am proud of what Cone is becoming.
+
+Excitedly, it seems we are (at last!) rapidly converging on the inflection point
+where a proper implementation of the paper's mechanisms becomes possible.
+Although the paper remains largely sound, it shows its age.
+Much has been learned since then, enabling the core ideas to be refined, adjusted and deepened.
+Since then, the paper's abstract concepts have been made more concrete,
+both syntactically and semantically.
+
+I have elaborated on several of these mechanisms 
+(e.g., lifetimes, permissions, and reference type semantics) in prior posts.
+Over the next two posts, I want to close more of this gap,
+turning semi-vague concepts into a detailed versatile design.
+In this post, I dive into significant detail about the compiler's view
+of Cone's reference semantics.
+
+## Reference Mechanisms ##
+
 [References](/post/reference-types) are easily the most complex and innovative type in
-[Cone's](http://cone.jondgoodwin.com/) type system.
+Cone's type system.
 A reference is a safe-to-use pointer type that not only specifies the type of the
 object it points to, but also its:
 
@@ -49,7 +83,6 @@ in several places, I thought it might be valuable to provide
 a detailed walkthrough of how they work together.
 The best way to do this is focus on each of the distinct
 events that a reference experiences.
-Afterwards, we will examine region functionality from a broader perspective.
 
 ## Regular References ##
 
@@ -121,28 +154,29 @@ to _allocate. Examples of useful RTTI might include:
 If the allocation succeeds, initialization proceeds in three steps: first the region data, then the permission data,
 and finally initializing the object's value.
 
-To initialize **region** data, the compiler invokes the `_init` method
-for the region. Many (but not all) regions have object-specific bookkeeping data
-to facilitate runtime-based memory management mechanisms.
-For example, the reference counting region might define a field called
-`count` which keeps track of the number of references to this object.
-The region's init initializes this data:
+1. To initialize **region** data, the compiler invokes the `_init` method
+   for the region. Many (but not all) regions have object-specific bookkeeping data
+   to facilitate runtime-based memory management mechanisms.
+   
+       For example, the reference counting region might define a field called
+       `count` which keeps track of the number of references to this object.
+       The region's _init method initializes this data:
 
-    fn _init(self &wri rc):
-	    self.count = 1   // initialize reference counter to 1
+        fn _init(self &wri rc):
+	        self.count = 1   // initialize reference counter to 1
 
-Initialization for a tracing garbage collector might initialize the tracing color to white.
-Alternatively, for improved performance, it might choose to store color information as bits
-independently of the object. In this case, initialization of the
-object's colors could be performed by _allocate rather than _init.
+       Initialization for a tracing garbage collector might initialize the tracing color to white.
+       Alternatively, for improved performance, it might choose to store color information as bits
+       independently of the object. In this case, initialization of the
+       object's colors could be performed by _allocate rather than _init.
 
-Static-only **permissions** often do not carry any bookkeeping data, and therefore
-will not require any initialization.
-However, permissions that generate runtime logic (e.g., those that provide runtime locks) do.
-The permission's `_init` method would be invoked to initialize this
-runtime bookkeeping data (e.g., initializing an atomic lock).
+2. Static-only **permissions** often do not carry any bookkeeping data, and therefore
+   will not require any initialization.
+   However, permissions that generate runtime logic (e.g., those that provide runtime locks) do.
+   The permission's `_init` method would be invoked to initialize this
+   runtime bookkeeping data (e.g., initializing an atomic lock).
 
-After initializing the region and permission data, 
+3. After initializing the region and permission data, 
 the compiler initializes the allocated **object** itself.
 If the allocator is given a value, this value is automatically
 copied into the allocated area. If the allocator specifies some type's initializer method,
@@ -352,16 +386,16 @@ Regardless of the region, the death of an object goes through several stages:
 #### Explicit Single-owner Death ####
 
 The single-owner region has a special power:
-It desired, the program may decide when the object dies.
+If desired, the program may decide when the object dies.
 This is done by allowing the program to invoke the `drop` method
 on its only reference. With any other region, this is not allowed.
 
-This capability also means that parameters may be passed to
-the drop method and values may be returned. These parameters are
-passed to the finalizer, which also then responsible for returning
-any expected value. Like other methods, `final` may be overloaded.
-Note that implicit finalization will pass no parameters and
-return no values.
+Implicit finalization passes no parameters and returns no values.
+However, explicit finalization uses method overloading (on `final`) to allow 
+parameters to be passed to
+the drop method and values (or an exception) to be returned. These parameters are
+passed to the finalizer, which is also then responsible for returning
+any expected value.
 
 #### Arena Deaths ####
 
@@ -389,9 +423,15 @@ The differences lie mainly with allocation and dereferencing.
   each element. Array references also offer the ability to resize an array.
   One cannot dereference an entire array reference; instead one
   uses indexing to load or mutate a specific element in the array.
-  One can borrow a subslice of any array reference.
-  The permission restrictions on borrowed interior references always
-  apply to array references.
+
+    One can borrow a subslice of any array reference.
+    (The permission restrictions on borrowed interior references always
+    apply to array references.)
+    In the presence of concurrency or parallelism, array references add
+	an extra capability: the ability
+	to create multiple non-overlapping slices of an single array reference,
+	and send each safely to a separate thread, so long as we can
+	guarantee that all threads will expire before the borrow's scope ends.
 
 - **Virtual references** may never be created via allocation.
   Instead, one must first allocate a new object using a regular reference
@@ -402,68 +442,12 @@ The differences lie mainly with allocation and dereferencing.
   When a virtual reference points to a same-sized variant,
   the permission restrictions about borrowed interior references apply.
 
-## Static and Dynamic Regions ##
+  
+## Region Modules ##
 
-Let's switch gears. So far, we have described the working relationship between
-references and regions, but have not described the independent nature of
-the regions themselves: their state and their runtime logic.
-
-Earlier, it was stated that region annotations on references are programmer-definable `struct`-like types,
-that specify their own fields and methods.
-In truth, regions are more than these reference-based region annotations.
-A region is actually fully defined by an importable module, within which lies:
-
-- the region annotation definition (reference-based state and methods)
-- the region's global state
-- the region's functions, the API that offers up the runtime logic for the region
-
-The details will obviously vary greatly from one region type to the next.
-
-### Single-owner, Reference Count and Static Arenas ###
-
-For single-owner and reference counted regions, their state and runtime logic
-is  minimal and is often off-loaded to the operating system or language runtime.
-These regions typically hook into a general-purpose allocator (e.g., malloc/free),
-but may alternatively hook into a lower-level API (e.g., mmap).
-The state of these regions is effectively global (static)
-and is simply a part of the assumed ambient environment of a program.
-
-A static arena region is almost as easy to implement, and can also
-be built on top of malloc/free. One approach is to have a global, nullable, mutable
-variable able to point to a linked-list of large, allocated blocks of memory.
-Object allocation uses a bump-pointer to carve out a slice of the latest block
-of memory. As each block fills up, another is added to the start of the linked list.
-Just before the program ends, runtime arena logic would be called able to
-free all memory blocks in the linked list.
-
-As a safe convenience to programmers, Cone allows an imported module
-to specify an initialization function, to initialize its required global state,
-and a finalization function, to clean up any accumulated state.
-So, when a program imports a static arena region library, the global state
-it requires is already correctly set up and ready-to-go.
-
-### Tracing Garbage Collection ###
-
-Tracing garbage collection regions are much more complicated to implement,
-requiring more extensive global state and runtime logic.
-The largest part of the runtime logic is the independently-executed garbage collector,
-but also includes its own custom allocator.
-The global state needs to keep track of the root collection of references
-all objects that have been allocated and are still alive for all generations,
-and the current state of the garbage collector.
-
-There are so many varieties of tracing garbage collection regions.
-It is beyond the scope of this post to get into any of the working details
-of any of these strategies. 
-However, it is relevant to describe how the compiler facilitates
-key aspects of tracing garbage collection logic:
-
-- 
-
-Need tracing maps/functions, safepoints, root set, stack tracing, RTTI.
-
-### First-class Regions ###
-
-Integer (non-pointer) references used by first-class
-arenas or pools, as their mechanisms work differently in important ways.
-Lifetime generativity on return values.
+Earlier, I described region annotations on references as programmer-definable 
+`struct`-like types, possessing fields and methods.
+However, regions are sometimes far more than these reference-based region annotations.
+In this next post, let's explore intriguing details about 
+[region modules](/post/region-modules)
+and their relationship to region types.
