@@ -9,7 +9,7 @@ toc: true # Optional, enable Table of Contents for specific post
 mathjax: false # Optional, enable MathJax for specific post
 categories:
   - "General"
-  - "Memory"
+  - "Memory Management"
   - "Types"
 tags:
 ---
