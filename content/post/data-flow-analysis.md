@@ -131,7 +131,8 @@ subscribes to move or copy semantics.
 If the expression's value is being moved, we may need to deactivate the source of that value,
 when that source was an variable embedded in an lval expression.
 Effectively, we signal this by modifying the variable node to say the value has been moved out of it.
-We do not allow a move out of a global value.
+We do not allow a move out of a global value, nor out of a complex type (e.g., struct) with drop or de-alias
+logic would fail on the now-missing element.
 
 Most of the time, when an expression's value is copied, we don't care. 
 However, we do care when the value being copied is (or contains) an owning reference whose region
@@ -157,6 +158,7 @@ The following nodes discard a value which might be, or might have, an owning ref
 
 - A block's expression statement, where we essentially are going to throw away all values
 - A de-reference of an owning reference that is not sourced by a variable
+  (This would happen near the end of a compound lval).
 - Assignment of an rval to `_`
 - Applying drop to an owning reference
 

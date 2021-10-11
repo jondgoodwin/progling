@@ -15,6 +15,10 @@ tags:
   - "C++"
 ---
 
+*Note: The latter part of this post is outdated in terms of the mechanisms that 
+the Cone compiler uses to de-alias ref-counted references.
+See [this post](/post/data-flow-analysis) for an updated description.*
+
 In the world of automatic memory management,
 [reference counting](https://en.wikipedia.org/wiki/Automatic_Reference_Counting)
 is considered to be one of the easiest to implement.
